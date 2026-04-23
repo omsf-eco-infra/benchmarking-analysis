@@ -24,5 +24,8 @@ vegafusion = ">=2.0.0"
 vl-convert-python = ">=1.0.0"
 marimo = ">=0.23.1"
 sqlglot = ">=23.4"
+uv = ">=0.11.7,<0.12"
 
 [tool.pixi.tasks]
+clean = "rm -rf output public"
+build = "pixi run marimo export html-wasm --mode run --sandbox -o output src/benchmarking_analysis/analysis.py"
