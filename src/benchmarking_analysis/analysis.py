@@ -23,7 +23,6 @@ def _():
     import polars as pl
     import json
     import os
-    import sqlalchemy as sqla
     import sys
 
     conn = duckdb.connect()
