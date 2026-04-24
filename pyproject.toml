@@ -26,6 +26,16 @@ marimo = ">=0.23.1"
 sqlglot = ">=23.4"
 uv = ">=0.11.7,<0.12"
 
+[tool.pixi.environments]
+default = {solve-group = "default"}
+dev = { solve-group = "default", features = ["aggregate"]}
+
 [tool.pixi.tasks]
 clean = "rm -rf output public"
 build = "pixi run marimo export html-wasm --mode run --sandbox -o output src/benchmarking_analysis/analysis.py"
+
+[tool.pixi.feature.aggregate.dependencies]
+boto3 = "*"
+
+[tool.pixi.feature.aggregate.tasks]
+generate = "pixi run python scripts/generate_ondemand_price.py && pixi run python scripts/export_parquet.py"
