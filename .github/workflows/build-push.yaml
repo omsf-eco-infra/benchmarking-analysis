@@ -21,9 +21,6 @@ jobs:
           pixi-version: v0.66.0
           cache: true
 
-      - name: Install deps
-        run: pixi install
-
       - name: Build WASM
         run: pixi run build
 

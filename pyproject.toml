@@ -7,7 +7,7 @@ version = "0.1.0"
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 
 [tool.pixi.pypi-dependencies]
 benchmarking_analysis = { path = ".", editable = true }

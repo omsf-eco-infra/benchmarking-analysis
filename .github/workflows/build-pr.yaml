@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  # SCHEDULE AND WORKFLOW DISPATCH USED FOR TESTING
-  schedule:
-    - cron: "0 0 * * *"
   workflow_dispatch:
 
 jobs:
@@ -23,9 +20,6 @@ jobs:
         with:
           pixi-version: v0.66.0
           cache: true
-
-      - name: Install deps
-        run: pixi install
 
       - name: Build WASM
         run: pixi run build
