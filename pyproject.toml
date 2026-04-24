@@ -32,8 +32,13 @@ dev = { solve-group = "default", features = ["aggregate"]}
 
 [tool.pixi.tasks]
 clean = "rm -rf output public"
-build = "pixi run marimo export html-wasm --mode run --sandbox -o output src/benchmarking_analysis/analysis.py"
+create-html = "pixi run marimo export html-wasm --mode run --sandbox -o output src/benchmarking_analysis/analysis.py"
 install-data = "cp -r data/* output/public"
+build =  [
+    {task = "clean"},
+    {task = "create-html"},
+    {task = "install-data"}
+]
 
 [tool.pixi.feature.aggregate.dependencies]
 boto3 = "*"

@@ -1,0 +1,35 @@
+name: Cleanup site staging
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+
+jobs:
+  get-branch-name:
+    if: ${{ github.repository == vars.MAIN_REPO }}
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.get_pr_number.outputs.pr_num }}
+    steps:
+      - name: Get PR number
+        id: get_pr_number
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
+            pr_num=${{ github.event.pull_request.number }}
+          else
+            # for testing
+            pr_num=-1
+          fi
+          echo "pr_num=${pr_num}" | tee -a "$GITHUB_OUTPUT"
+
+  cleanup-staging:
+    needs: get-branch-name
+    if: ${{ github.repository == vars.MAIN_REPO }}
+    uses: omsf/static-site-tools/.github/workflows/cleanup-cloudflare.yaml@main
+    with:
+      pr_number: ${{ fromJSON(needs.get-branch-name.outputs.pr_number) }}
+      project_name: ${{ vars.CLOUDFLARE_ASTRO_PROJECT_NAME }}
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
