@@ -3,7 +3,7 @@ import duckdb
 conn = duckdb.connect()
 conn.execute("INSTALL httpfs;")
 conn.execute("LOAD httpfs;")
-conn.read_json("2026-04-pricing.json").create_view("instance_prices")
+
 
 conn.execute("""
     CREATE OR REPLACE SECRET s3_secret (
@@ -11,12 +11,13 @@ conn.execute("""
         PROVIDER credential_chain
     );
 """)
+
 conn.execute(
     r"""
     CREATE OR REPLACE TEMP VIEW md_outputs_raw AS
     SELECT
-        regexp_extract(filename, 'runs/([0-9]{4}-[0-9]{2}-[0-9]{2})/', 1) AS run_date,
-        regexp_extract(filename, 'runs/([^/]+)/([^/]+)/output/md_benchmark\.out$', 2)     AS run_id,
+        CAST(regexp_extract(filename, 'runs/([0-9]{4}-[0-9]{2}-[0-9]{2})/', 1) AS DATE) AS run_date,
+        regexp_extract(filename, 'runs/([^/]+)/([^/]+)/output/md_benchmark\.out$', 2) AS run_id,
         bace,
         p38,
         jnk1,
@@ -33,12 +34,32 @@ conn.execute(
 
 conn.execute(
     r"""
-    CREATE OR REPLACE TEMP VIEW md_manifests_raw AS
+    CREATE OR REPLACE TEMP VIEW rbfe_outputs_raw AS
+    SELECT
+        CAST(regexp_extract(filename, 'runs/([0-9]{4}-[0-9]{2}-[0-9]{2})/', 1) AS DATE) AS run_date,
+        regexp_extract(filename, 'runs/([^/]+)/([^/]+)/output/rbfe_benchmark\.out$', 2) AS run_id,
+        bace,
+        p38,
+        jnk1,
+        cdk2,
+        ptp1b,
+        tyk2,
+        mcl1,
+        thrombin
+    FROM read_json(
+        's3://benchmark-bucket-omsf-2026/runs/2026-*-*/**/output/rbfe_benchmark.out'
+    );
+    """
+)
+
+conn.execute(
+    r"""
+    CREATE OR REPLACE TEMP VIEW manifests_raw AS
     SELECT
         regexp_extract(filename, 'runs/([^/]+)/([^/]+)/manifest\.json$', 2) AS run_id,
         instance_type,
         ami_id AS ami,
-        mps_process_count,
+        mps_process_count
     FROM read_json(
         's3://benchmark-bucket-omsf-2026/runs/2026-*-*/**/manifest.json'
     )
@@ -85,21 +106,101 @@ conn.execute(
 
 conn.execute(
     """
+    CREATE OR REPLACE TEMP VIEW rbfe_metrics_long AS
+    SELECT
+        run_date,
+        run_id,
+        regexp_replace(metric_name, '_(complex|solvent)$', '') AS benchmark,
+        CASE
+            WHEN metric_name LIKE '%_complex' THEN 'complex'
+            WHEN metric_name LIKE '%_solvent' THEN 'solvent'
+        END AS phase,
+        metric_value
+    FROM (
+        SELECT
+            run_date,
+            run_id,
+            CAST(bace->>'complex' AS DOUBLE) AS bace_complex,
+            CAST(bace->>'solvent' AS DOUBLE) AS bace_solvent,
+            CAST(p38->>'complex' AS DOUBLE) AS p38_complex,
+            CAST(p38->>'solvent' AS DOUBLE) AS p38_solvent,
+            CAST(jnk1->>'complex' AS DOUBLE) AS jnk1_complex,
+            CAST(jnk1->>'solvent' AS DOUBLE) AS jnk1_solvent,
+            CAST(cdk2->>'complex' AS DOUBLE) AS cdk2_complex,
+            CAST(cdk2->>'solvent' AS DOUBLE) AS cdk2_solvent,
+            CAST(ptp1b->>'complex' AS DOUBLE) AS ptp1b_complex,
+            CAST(ptp1b->>'solvent' AS DOUBLE) AS ptp1b_solvent,
+            CAST(tyk2->>'complex' AS DOUBLE) AS tyk2_complex,
+            CAST(tyk2->>'solvent' AS DOUBLE) AS tyk2_solvent,
+            CAST(mcl1->>'complex' AS DOUBLE) AS mcl1_complex,
+            CAST(mcl1->>'solvent' AS DOUBLE) AS mcl1_solvent,
+            CAST(thrombin->>'complex' AS DOUBLE) AS thrombin_complex,
+            CAST(thrombin->>'solvent' AS DOUBLE) AS thrombin_solvent
+        FROM rbfe_outputs_raw
+    )
+    UNPIVOT (
+        metric_value FOR metric_name IN (
+            bace_complex,
+            bace_solvent,
+            p38_complex,
+            p38_solvent,
+            jnk1_complex,
+            jnk1_solvent,
+            cdk2_complex,
+            cdk2_solvent,
+            ptp1b_complex,
+            ptp1b_solvent,
+            tyk2_complex,
+            tyk2_solvent,
+            mcl1_complex,
+            mcl1_solvent,
+            thrombin_complex,
+            thrombin_solvent
+        )
+    );
+    """
+)
+
+conn.execute(
+    """
     COPY (
         SELECT
             'md' AS benchmark_type,
-            mps_process_count,
+            m.mps_process_count,
             l.run_date,
             l.run_id,
-            l.benchmark as system,
+            l.benchmark AS system,
+            NULL::VARCHAR AS phase,
             'ns_per_day' AS metric_name,
             l.ns_per_day AS metric_value,
             m.instance_type,
-            m.ami,
+            m.ami
         FROM md_metrics_long l
-        JOIN md_manifests_raw m USING (run_id)
-        LEFT JOIN instance_prices p USING (instance_type)
-    ) TO 'md_benchmark_aws_data.parquet'
+        JOIN manifests_raw m USING (run_id)
+        WHERE isfinite(l.ns_per_day)
+    ) TO 'output/public/md_benchmark_aws_data.parquet'
+    (FORMAT PARQUET, COMPRESSION ZSTD)
+    """
+)
+
+conn.execute(
+    """
+    COPY (
+        SELECT
+            'rbfe' AS benchmark_type,
+            m.mps_process_count,
+            l.run_date,
+            l.run_id,
+            l.benchmark AS system,
+            l.phase,
+            'ns_per_day' AS metric_name,
+            l.metric_value,
+            m.instance_type,
+            m.ami
+        FROM rbfe_metrics_long l
+        JOIN manifests_raw m USING (run_id)
+        WHERE isfinite(l.metric_value)
+    ) TO 'output/public/rbfe_benchmark_aws_data.parquet'
     (FORMAT PARQUET, COMPRESSION ZSTD)
     """
 )
