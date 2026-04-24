@@ -40,7 +40,7 @@ jobs:
       run-id: ${{ github.event.workflow_run.id }}
       pr-number: ${{ fromJSON(needs.get-metadata.outputs.pr_number) }}  # convert to int
       pr-headsha: ${{ needs.get-metadata.outputs.pr_headsha }}
-      project-name: ${{ vars. CLOUDFLARE_ASTRO_PROJECT_NAME }}
+      project-name: ${{ vars. CLOUDFLARE_PROJECT_NAME }}
       html-dir: outpu
       label: Marimo site
     secrets:

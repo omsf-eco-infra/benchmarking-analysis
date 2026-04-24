@@ -29,7 +29,7 @@ jobs:
     uses: omsf/static-site-tools/.github/workflows/cleanup-cloudflare.yaml@main
     with:
       pr_number: ${{ fromJSON(needs.get-branch-name.outputs.pr_number) }}
-      project_name: ${{ vars.CLOUDFLARE_ASTRO_PROJECT_NAME }}
+      project_name: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
