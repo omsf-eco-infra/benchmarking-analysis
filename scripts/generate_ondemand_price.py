@@ -54,8 +54,6 @@ prices = [
     }
     for it in instance_types
 ]
-output_name = (
-    f"output/public/{datetime.now().year}-{datetime.now().strftime('%m')}-pricing.json"
-)
+output_name = f"data/{datetime.now().year}-{datetime.now().strftime('%m')}-pricing.json"
 with open(output_name, "w") as f:
     json.dump(prices, f)

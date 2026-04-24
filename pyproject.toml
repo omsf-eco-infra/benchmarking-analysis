@@ -33,9 +33,11 @@ dev = { solve-group = "default", features = ["aggregate"]}
 [tool.pixi.tasks]
 clean = "rm -rf output public"
 build = "pixi run marimo export html-wasm --mode run --sandbox -o output src/benchmarking_analysis/analysis.py"
+install-data = "cp -r data/* output/public"
 
 [tool.pixi.feature.aggregate.dependencies]
 boto3 = "*"
 
 [tool.pixi.feature.aggregate.tasks]
 generate = "pixi run python scripts/generate_ondemand_price.py && pixi run python scripts/export_parquet.py"
+link = "ln -s $(pwd)/data $(pwd)/src/benchmarking_analysis/public"

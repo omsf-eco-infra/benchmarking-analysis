@@ -178,7 +178,7 @@ conn.execute(
         FROM md_metrics_long l
         JOIN manifests_raw m USING (run_id)
         WHERE isfinite(l.ns_per_day)
-    ) TO 'output/public/md_benchmark_aws_data.parquet'
+    ) TO 'data/md_benchmark_aws_data.parquet'
     (FORMAT PARQUET, COMPRESSION ZSTD)
     """
 )
@@ -200,7 +200,7 @@ conn.execute(
         FROM rbfe_metrics_long l
         JOIN manifests_raw m USING (run_id)
         WHERE isfinite(l.metric_value)
-    ) TO 'output/public/rbfe_benchmark_aws_data.parquet'
+    ) TO 'data/rbfe_benchmark_aws_data.parquet'
     (FORMAT PARQUET, COMPRESSION ZSTD)
     """
 )

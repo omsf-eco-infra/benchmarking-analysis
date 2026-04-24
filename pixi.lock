@@ -670,7 +670,7 @@ packages:
 - pypi: ./
   name: benchmarking-analysis
   version: 0.1.0
-  sha256: f26e0ae08038c072a9a9fb0139916f3ca86bbb0111812941220409e1d8ed107f
+  sha256: 9e1a5971dcdfa67473b061f0223584500b773aabc98db69c2505d70cd9fc3eaa
   requires_python: '>=3.13'
 - conda: https://conda.anaconda.org/conda-forge/noarch/boto3-1.42.93-pyhd8ed1ab_0.conda
   sha256: e6f3fb4e84e9eaa13bcd508556b6c76019e52901e141c4b7ed49c86002a4e4cb

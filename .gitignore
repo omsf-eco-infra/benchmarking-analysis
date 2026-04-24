@@ -8,3 +8,5 @@ public/*
 **/__marimo__
 skills-lock.json
 .agents
+**/layouts
+src/benchmarking_analysis/public
