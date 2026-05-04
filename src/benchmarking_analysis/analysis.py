@@ -12,8 +12,31 @@
 
 import marimo
 
-__generated_with = "0.23.3"
+__generated_with = "0.23.1"
 app = marimo.App(width="medium")
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # OMSF GPU cloud benchmark analysis
+
+    This notebook showcases an interactive benchmark dashboard for comparing AWS GPU instance types on molecular dynamics (MD) with OpenMM and relative binding free energy (RBFE) with Open Free Energy. We also showcase the use of Nvidia's Multiprocess Service (MPS) for concurrent GPU sharing across multiple processes.
+
+    It combines benchmark throughput data with on-demand instance pricing to highlight:
+
+    - **Raw performance** across GPU instance families
+    - **Cost efficiency** metrics such as ns/day, ns per dollar, and dollars per ns
+    - **MPS process-count sensitivity** through the controls below
+    - **Best-instance comparisons** with winner highlighting for each benchmark system
+
+    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark)
+
+    Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration).
+
+    Use the dropdowns and charts to explore how instance choice and concurrency affect both performance and cost.
+    """)
+    return
 
 
 @app.cell
@@ -55,25 +78,6 @@ async def _():
     _ = conn.read_parquet(aws_md_benchmark_path).to_table("benchmark_costs")
     _ = conn.read_parquet(aws_rbfe_benchmark_path).to_table("rbfe_benchmark_costs")
     return conn, mo
-
-
-@app.cell(hide_code=True)
-def _(benchmark_costs, conn, mo):
-    _df = mo.sql(
-        f"""
-        SELECT
-            system,
-            instance_type,
-            mps_process_count,
-            COUNT(*) AS n_runs
-        FROM benchmark_costs
-        WHERE benchmark_type = 'md'
-        GROUP BY system, instance_type, mps_process_count
-        ORDER BY system, mps_process_count, instance_type;
-        """,
-        engine=conn
-    )
-    return
 
 
 @app.cell(hide_code=True)
@@ -129,7 +133,7 @@ def _(conn, mo):
     mps_process_count_dropdown = mo.ui.dropdown(
         options=mps_process_count_options,
         value=mps_process_count_options[0],
-        label="MPS process count",
+        label="MPS process count (Simultaneous simulations / GPU)",
     )
 
     mps_process_count_dropdown
@@ -141,7 +145,6 @@ def _(benchmark_costs_with_prices, conn, mo, mps_process_count_dropdown):
     median_md_cost_mps_1 = mo.sql(
         f"""
         SELECT
-            run_date,
             mps_process_count,
             instance_type,
             median(metric_value) AS ns_per_day,
@@ -150,8 +153,8 @@ def _(benchmark_costs_with_prices, conn, mo, mps_process_count_dropdown):
         FROM benchmark_costs_with_prices
         WHERE benchmark_type = 'md'
           AND mps_process_count = {mps_process_count_dropdown.value}
-        GROUP BY run_date, mps_process_count, instance_type, system
-        ORDER BY run_date, system, ns_per_day DESC;
+        GROUP BY mps_process_count, instance_type, system
+        ORDER BY system, ns_per_day DESC;
         """,
         engine=conn
     )
@@ -259,6 +262,133 @@ def _(alt, median_md_cost_mps_1):
     )
 
     alt.vconcat(_md_runtime, _md_cost).configure_axis(grid=False)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### MD scaling by MPS process count
+
+    Select a benchmark system to compare instance-type performance across MPS process counts `1`, `2`, and `4`.
+    """)
+    return
+
+
+@app.cell
+def _(conn, mo):
+    md_system_options = [
+        row[0]
+        for row in conn.execute(
+            """
+            SELECT DISTINCT system
+            FROM benchmark_costs
+            WHERE benchmark_type = 'md'
+            ORDER BY system
+            """
+        ).fetchall()
+    ]
+
+    mo.stop(
+        not md_system_options,
+        mo.md("No MD benchmark systems available for system selection."),
+    )
+
+    md_system_dropdown = mo.ui.dropdown(
+        options=md_system_options,
+        value=md_system_options[0],
+        label="MD system",
+    )
+
+    md_system_dropdown
+    return (md_system_dropdown,)
+
+
+@app.cell(hide_code=True)
+def _(benchmark_costs_with_prices, conn, md_system_dropdown, mo):
+    md_system_sql = md_system_dropdown.value.replace("'", "''")
+
+    md_system_mps_comparison = mo.sql(
+        f"""
+        SELECT
+            system,
+            mps_process_count,
+            instance_type,
+            median(metric_value) AS ns_per_day,
+            median(ns_per_dollar) AS ns_per_dollar
+        FROM benchmark_costs_with_prices
+        WHERE benchmark_type = 'md'
+          AND system = '{md_system_sql}'
+          AND mps_process_count IN (1, 2, 4)
+        GROUP BY system, mps_process_count, instance_type
+        ORDER BY mps_process_count, instance_type;
+        """,
+        engine=conn,
+    )
+    return (md_system_mps_comparison,)
+
+
+@app.cell
+def _(alt, md_system_dropdown, md_system_mps_comparison):
+    _instance_sort = ["g4dn.xlarge", "g5.xlarge", "g6e.xlarge"]
+    _mps_sort = [1, 2, 4]
+    _instance_axis = alt.X(
+        "instance_type:N",
+        title="instance type",
+        sort=_instance_sort,
+        axis=alt.Axis(labelAngle=-35),
+    )
+    _mps_color = alt.Color(
+        "mps_process_count:O",
+        title="MPS processes",
+        sort=_mps_sort,
+    )
+    _mps_offset = alt.XOffset("mps_process_count:O", sort=_mps_sort)
+    _tooltips = [
+        alt.Tooltip("system:N", title="system"),
+        alt.Tooltip("instance_type:N", title="instance type"),
+        alt.Tooltip("mps_process_count:O", title="MPS processes"),
+    ]
+
+    _md_mps_runtime = (
+        alt.Chart(md_system_mps_comparison)
+        .mark_bar()
+        .encode(
+            x=_instance_axis,
+            xOffset=_mps_offset,
+            y=alt.Y("ns_per_day:Q", title="ns per day"),
+            color=_mps_color,
+            tooltip=_tooltips
+            + [alt.Tooltip("ns_per_day:Q", title="ns/day", format=".2f")],
+        )
+        .properties(
+            title=f"MD throughput by instance type: {md_system_dropdown.value}",
+            height=260,
+            width=520,
+        )
+    )
+
+    _md_mps_cost = (
+        alt.Chart(md_system_mps_comparison)
+        .mark_bar()
+        .encode(
+            x=_instance_axis,
+            xOffset=_mps_offset,
+            y=alt.Y("ns_per_dollar:Q", title="ns per dollar"),
+            color=_mps_color,
+            tooltip=_tooltips
+            + [alt.Tooltip("ns_per_dollar:Q", title="ns/$", format=".2f")],
+        )
+        .properties(
+            title=f"MD cost efficiency by instance type: {md_system_dropdown.value}",
+            height=260,
+            width=520,
+        )
+    )
+
+    alt.vconcat(_md_mps_runtime, _md_mps_cost).resolve_scale(
+        color="shared"
+    ).configure_axis(grid=False)
     return
 
 
@@ -442,6 +572,135 @@ def _(alt, median_rbfe_cost):
     )
 
     alt.vconcat(_md_runtime, _md_cost).configure_axis(grid=False)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ### RBFE scaling by MPS process count
+
+    Select a benchmark system to compare complex-phase RBFE performance across MPS process counts `1`, `2`, and `4`.
+    """)
+    return
+
+
+@app.cell
+def _(conn, mo):
+    rbfe_system_options = [
+        row[0]
+        for row in conn.execute(
+            """
+            SELECT DISTINCT system
+            FROM rbfe_benchmark_costs
+            WHERE benchmark_type = 'rbfe'
+              AND phase = 'complex'
+            ORDER BY system
+            """
+        ).fetchall()
+    ]
+
+    mo.stop(
+        not rbfe_system_options,
+        mo.md("No RBFE benchmark systems available for system selection."),
+    )
+
+    rbfe_system_dropdown = mo.ui.dropdown(
+        options=rbfe_system_options,
+        value=rbfe_system_options[0],
+        label="RBFE system",
+    )
+
+    rbfe_system_dropdown
+    return (rbfe_system_dropdown,)
+
+
+@app.cell(hide_code=True)
+def _(conn, mo, rbfe_benchmark_costs_with_prices, rbfe_system_dropdown):
+    rbfe_system_sql = rbfe_system_dropdown.value.replace("'", "''")
+
+    rbfe_system_mps_comparison = mo.sql(
+        f"""
+        SELECT
+            system,
+            mps_process_count,
+            instance_type,
+            median(metric_value) AS ns_per_day,
+            median(ns_per_dollar) AS ns_per_dollar
+        FROM rbfe_benchmark_costs_with_prices
+        WHERE benchmark_type = 'rbfe'
+          AND phase = 'complex'
+          AND system = '{rbfe_system_sql}'
+          AND mps_process_count IN (1, 2, 4)
+        GROUP BY system, mps_process_count, instance_type
+        ORDER BY instance_type, mps_process_count;
+        """,
+        engine=conn,
+    )
+    return (rbfe_system_mps_comparison,)
+
+
+@app.cell
+def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
+    _instance_sort = ["g4dn.xlarge", "g5.xlarge", "g6e.xlarge"]
+    _mps_sort = [1, 2, 4]
+    _instance_axis = alt.X(
+        "instance_type:N",
+        title="instance type",
+        sort=_instance_sort,
+        axis=alt.Axis(labelAngle=-35),
+    )
+    _mps_color = alt.Color(
+        "mps_process_count:O",
+        title="MPS processes",
+        sort=_mps_sort,
+    )
+    _mps_offset = alt.XOffset("mps_process_count:O", sort=_mps_sort)
+    _tooltips = [
+        alt.Tooltip("system:N", title="system"),
+        alt.Tooltip("instance_type:N", title="instance type"),
+        alt.Tooltip("mps_process_count:O", title="MPS processes"),
+    ]
+
+    _rbfe_mps_runtime = (
+        alt.Chart(rbfe_system_mps_comparison)
+        .mark_bar()
+        .encode(
+            x=_instance_axis,
+            xOffset=_mps_offset,
+            y=alt.Y("ns_per_day:Q", title="ns per day"),
+            color=_mps_color,
+            tooltip=_tooltips
+            + [alt.Tooltip("ns_per_day:Q", title="ns/day", format=".2f")],
+        )
+        .properties(
+            title=f"RBFE throughput by instance type: {rbfe_system_dropdown.value}",
+            height=260,
+            width=520,
+        )
+    )
+
+    _rbfe_mps_cost = (
+        alt.Chart(rbfe_system_mps_comparison)
+        .mark_bar()
+        .encode(
+            x=_instance_axis,
+            xOffset=_mps_offset,
+            y=alt.Y("ns_per_dollar:Q", title="ns per dollar"),
+            color=_mps_color,
+            tooltip=_tooltips
+            + [alt.Tooltip("ns_per_dollar:Q", title="ns/$", format=".2f")],
+        )
+        .properties(
+            title=f"RBFE cost efficiency by instance type: {rbfe_system_dropdown.value}",
+            height=260,
+            width=520,
+        )
+    )
+
+    alt.vconcat(_rbfe_mps_runtime, _rbfe_mps_cost).resolve_scale(
+        color="shared"
+    ).configure_axis(grid=False)
     return
 
 
