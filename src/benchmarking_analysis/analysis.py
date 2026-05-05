@@ -13,7 +13,7 @@
 import marimo
 
 __generated_with = "0.23.1"
-app = marimo.App(width="medium")
+app = marimo.App(width="full", app_title="OMSF GPU Cloud Benchmarking")
 
 
 @app.cell(hide_code=True)
@@ -30,7 +30,7 @@ def _(mo):
     - **MPS process-count sensitivity** through the controls below
     - **Best-instance comparisons** with winner highlighting for each benchmark system
 
-    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark)
+    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmarks)
 
     Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration).
 
@@ -53,7 +53,9 @@ async def _():
     aws_md_file_name = "md_benchmark_aws_data.parquet"
     aws_rbfe_file_name = "rbfe_benchmark_aws_data.parquet"
     pricing_path = str(mo.notebook_location() / "public" / pricing_file_name)
-    aws_md_benchmark_path = str(mo.notebook_location() / "public" / aws_md_file_name)
+    aws_md_benchmark_path = str(
+        mo.notebook_location() / "public" / aws_md_file_name
+    )
     aws_rbfe_benchmark_path = str(
         mo.notebook_location() / "public" / aws_rbfe_file_name
     )
@@ -77,7 +79,10 @@ async def _():
     _ = conn.read_json(pricing_path).to_table("instance_prices")
     _ = conn.read_parquet(aws_md_benchmark_path).to_table("benchmark_costs")
     _ = conn.read_parquet(aws_rbfe_benchmark_path).to_table("rbfe_benchmark_costs")
-    return conn, mo
+    chart_height = 260
+    chart_width = 120
+    chart_height, chart_width
+    return chart_height, chart_width, conn, mo
 
 
 @app.cell(hide_code=True)
@@ -102,16 +107,13 @@ def _(benchmark_costs, conn, instance_prices, mo):
 @app.cell(hide_code=True)
 def _(mo):
     md_benchmarks_intro = mo.md(r"""
-    Compare raw throughput and cost efficiency across instance types for the selected MPS process count.
-
-    ---
+    Compare raw throughput and cost efficiency across instance types for the selected MPS process count. Increasing MPS is how many more simulations you run on concurrently on a GPU.
     """)
     return (md_benchmarks_intro,)
 
 
 @app.cell
 def _(conn, mo):
-
     mps_process_count_options = [
         row[0]
         for row in conn.execute(
@@ -154,7 +156,7 @@ def _(benchmark_costs_with_prices, conn, mo, mps_process_count_dropdown):
         ORDER BY system, ns_per_day DESC;
         """,
         output=False,
-        engine=conn,
+        engine=conn
     )
     return (median_md_cost_mps_1,)
 
@@ -167,7 +169,7 @@ def _():
 
 
 @app.cell
-def _(alt, median_md_cost_mps_1):
+def _(alt, chart_height, chart_width, median_md_cost_mps_1):
     _md_runtime = (
         alt.Chart(median_md_cost_mps_1)
         .transform_window(
@@ -209,8 +211,8 @@ def _(alt, median_md_cost_mps_1):
             )
         )
         .properties(
-            height=260,
-            width=120,
+            height=chart_height,
+            width=chart_width,
         )
     )
     _md_cost = (
@@ -254,8 +256,8 @@ def _(alt, median_md_cost_mps_1):
             )
         )
         .properties(
-            height=260,
-            width=120,
+            height=chart_height,
+            width=chart_width,
         )
     )
 
@@ -268,8 +270,6 @@ def _(alt, median_md_cost_mps_1):
 @app.cell(hide_code=True)
 def _(mo):
     md_mps_intro = mo.md(r"""
-    ### MD scaling by MPS process count
-
     Select a benchmark system to compare instance-type performance across MPS process counts `1`, `2`, and `4`.
     """)
     return (md_mps_intro,)
@@ -328,7 +328,13 @@ def _(benchmark_costs_with_prices, conn, md_system_dropdown, mo):
 
 
 @app.cell
-def _(alt, md_system_dropdown, md_system_mps_comparison):
+def _(
+    alt,
+    chart_height,
+    chart_width,
+    md_system_dropdown,
+    md_system_mps_comparison,
+):
     _instance_sort = ["g4dn.xlarge", "g5.xlarge", "g6e.xlarge"]
     _mps_sort = [1, 2, 4]
     _instance_axis = alt.X(
@@ -362,8 +368,8 @@ def _(alt, md_system_dropdown, md_system_mps_comparison):
         )
         .properties(
             title=f"MD throughput by instance type: {md_system_dropdown.value}",
-            height=260,
-            width=520,
+            height=chart_height,
+            width=chart_width * 3,
         )
     )
 
@@ -380,8 +386,8 @@ def _(alt, md_system_dropdown, md_system_mps_comparison):
         )
         .properties(
             title=f"MD cost efficiency by instance type: {md_system_dropdown.value}",
-            height=260,
-            width=520,
+            height=chart_height,
+            width=chart_width * 3,
         )
     )
 
@@ -396,11 +402,7 @@ def _(alt, md_system_dropdown, md_system_mps_comparison):
 @app.cell(hide_code=True)
 def _(mo):
     rbfe_benchmarks_intro = mo.md(r"""
-    ## Relative binding free energy (RBFE) benchmarks
-
     Compare RBFE complex-phase throughput and cost efficiency across instance types for the selected MPS process count.
-
-    ---
     """)
     return (rbfe_benchmarks_intro,)
 
@@ -474,13 +476,13 @@ def _(
         ORDER BY system, ns_per_day DESC;
         """,
         output=False,
-        engine=conn,
+        engine=conn
     )
     return (median_rbfe_cost,)
 
 
 @app.cell
-def _(alt, median_rbfe_cost):
+def _(alt, chart_height, chart_width, median_rbfe_cost):
     _md_runtime = (
         alt.Chart(median_rbfe_cost)
         .transform_window(
@@ -522,8 +524,8 @@ def _(alt, median_rbfe_cost):
             )
         )
         .properties(
-            height=260,
-            width=120,
+            height=chart_height,
+            width=chart_width,
         )
     )
     _md_cost = (
@@ -567,8 +569,8 @@ def _(alt, median_rbfe_cost):
             )
         )
         .properties(
-            height=260,
-            width=120,
+            height=chart_height,
+            width=chart_width,
         )
     )
 
@@ -643,7 +645,13 @@ def _(conn, mo, rbfe_benchmark_costs_with_prices, rbfe_system_dropdown):
 
 
 @app.cell
-def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
+def _(
+    alt,
+    chart_height,
+    chart_width,
+    rbfe_system_dropdown,
+    rbfe_system_mps_comparison,
+):
     _instance_sort = ["g4dn.xlarge", "g5.xlarge", "g6e.xlarge"]
     _mps_sort = [1, 2, 4]
     _instance_axis = alt.X(
@@ -677,8 +685,8 @@ def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
         )
         .properties(
             title=f"RBFE throughput by instance type: {rbfe_system_dropdown.value}",
-            height=260,
-            width=520,
+            height=chart_height,
+            width=chart_width,
         )
     )
 
@@ -695,8 +703,8 @@ def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
         )
         .properties(
             title=f"RBFE cost efficiency by instance type: {rbfe_system_dropdown.value}",
-            height=260,
-            width=520,
+            height=chart_height,
+            width=chart_width,
         )
     )
 
@@ -708,47 +716,57 @@ def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
     return (rbfe_mps_chart,)
 
 
-@app.cell(hide_code=True)
+@app.cell
 def _(
     md_benchmarks_chart,
     md_benchmarks_intro,
-    md_mps_chart,
-    md_mps_intro,
-    md_system_dropdown,
     mo,
     mps_process_count_dropdown,
+):
+    mo.vstack(
+        [
+            mo.md("## Molecular Dynamics (MD) benchmarks using OpenMM"),
+            md_benchmarks_intro,
+            mps_process_count_dropdown,
+            md_benchmarks_chart,
+        ]
+    )
+    return
+
+
+@app.cell
+def _(md_mps_chart, md_mps_intro, md_system_dropdown, mo):
+    mo.vstack(
+        [
+            mo.md("## MPS scaling by MPS Process Count"),
+            md_mps_intro,
+            md_system_dropdown,
+            md_mps_chart,
+        ]
+    )
+    return
+
+
+@app.cell
+def _(
+    mo,
     rbfe_benchmarks_chart,
     rbfe_benchmarks_intro,
-    rbfe_mps_chart,
-    rbfe_mps_intro,
     rbfe_mps_process_count_dropdown,
-    rbfe_system_dropdown,
 ):
-    mo.accordion(
-        {
-            "Molecular dynamics (MD) benchmarks": mo.vstack(
-                [
-                    md_benchmarks_intro,
-                    mps_process_count_dropdown,
-                    md_benchmarks_chart,
-                ]
-            ),
-            "MD scaling by MPS process count": mo.vstack(
-                [md_mps_intro, md_system_dropdown, md_mps_chart]
-            ),
-            "Relative binding free energy (RBFE) benchmarks": mo.vstack(
-                [
-                    rbfe_benchmarks_intro,
-                    rbfe_mps_process_count_dropdown,
-                    rbfe_benchmarks_chart,
-                ]
-            ),
-            "RBFE scaling by MPS process count": mo.vstack(
-                [rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart]
-            ),
-        },
-        multiple=True,
+    mo.vstack(
+        [
+            rbfe_benchmarks_intro,
+            rbfe_mps_process_count_dropdown,
+            rbfe_benchmarks_chart,
+        ]
     )
+    return
+
+
+@app.cell
+def _(mo, rbfe_mps_chart, rbfe_mps_intro, rbfe_system_dropdown):
+    mo.vstack([rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
     return
 
 
