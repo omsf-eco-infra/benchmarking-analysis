@@ -93,6 +93,7 @@ def _(benchmark_costs, conn, instance_prices, mo):
         FROM benchmark_costs b
         LEFT JOIN instance_prices p USING (instance_type);
         """,
+        output=False,
         engine=conn
     )
     return
@@ -100,14 +101,12 @@ def _(benchmark_costs, conn, instance_prices, mo):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
-    ## Molecular dynamics (MD) benchmarks
-
+    md_benchmarks_intro = mo.md(r"""
     Compare raw throughput and cost efficiency across instance types for the selected MPS process count.
 
     ---
     """)
-    return
+    return (md_benchmarks_intro,)
 
 
 @app.cell
@@ -135,8 +134,6 @@ def _(conn, mo):
         value=mps_process_count_options[0],
         label="MPS process count (Simultaneous simulations / GPU)",
     )
-
-    mps_process_count_dropdown
     return (mps_process_count_dropdown,)
 
 
@@ -156,7 +153,8 @@ def _(benchmark_costs_with_prices, conn, mo, mps_process_count_dropdown):
         GROUP BY mps_process_count, instance_type, system
         ORDER BY system, ns_per_day DESC;
         """,
-        engine=conn
+        output=False,
+        engine=conn,
     )
     return (median_md_cost_mps_1,)
 
@@ -261,18 +259,20 @@ def _(alt, median_md_cost_mps_1):
         )
     )
 
-    alt.vconcat(_md_runtime, _md_cost).configure_axis(grid=False)
-    return
+    md_benchmarks_chart = alt.vconcat(_md_runtime, _md_cost).configure_axis(
+        grid=False
+    )
+    return (md_benchmarks_chart,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    md_mps_intro = mo.md(r"""
     ### MD scaling by MPS process count
 
     Select a benchmark system to compare instance-type performance across MPS process counts `1`, `2`, and `4`.
     """)
-    return
+    return (md_mps_intro,)
 
 
 @app.cell
@@ -299,8 +299,6 @@ def _(conn, mo):
         value=md_system_options[0],
         label="MD system",
     )
-
-    md_system_dropdown
     return (md_system_dropdown,)
 
 
@@ -324,6 +322,7 @@ def _(benchmark_costs_with_prices, conn, md_system_dropdown, mo):
         ORDER BY mps_process_count, instance_type;
         """,
         engine=conn,
+        output=False,
     )
     return (md_system_mps_comparison,)
 
@@ -386,22 +385,24 @@ def _(alt, md_system_dropdown, md_system_mps_comparison):
         )
     )
 
-    alt.vconcat(_md_mps_runtime, _md_mps_cost).resolve_scale(
-        color="shared"
-    ).configure_axis(grid=False)
-    return
+    md_mps_chart = (
+        alt.vconcat(_md_mps_runtime, _md_mps_cost)
+        .resolve_scale(color="shared")
+        .configure_axis(grid=False)
+    )
+    return (md_mps_chart,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    rbfe_benchmarks_intro = mo.md(r"""
     ## Relative binding free energy (RBFE) benchmarks
 
     Compare RBFE complex-phase throughput and cost efficiency across instance types for the selected MPS process count.
 
     ---
     """)
-    return
+    return (rbfe_benchmarks_intro,)
 
 
 @app.cell(hide_code=True)
@@ -417,6 +418,7 @@ def _(conn, instance_prices, mo, rbfe_benchmark_costs):
         FROM rbfe_benchmark_costs b
         LEFT JOIN instance_prices p USING (instance_type);
         """,
+        output=False,
         engine=conn
     )
     return
@@ -446,8 +448,6 @@ def _(conn, mo):
         value=rbfe_mps_process_count_options[0],
         label="RBFE MPS process count",
     )
-
-    rbfe_mps_process_count_dropdown
     return (rbfe_mps_process_count_dropdown,)
 
 
@@ -473,7 +473,8 @@ def _(
         GROUP BY mps_process_count, instance_type, system
         ORDER BY system, ns_per_day DESC;
         """,
-        engine=conn
+        output=False,
+        engine=conn,
     )
     return (median_rbfe_cost,)
 
@@ -571,18 +572,20 @@ def _(alt, median_rbfe_cost):
         )
     )
 
-    alt.vconcat(_md_runtime, _md_cost).configure_axis(grid=False)
-    return
+    rbfe_benchmarks_chart = alt.vconcat(_md_runtime, _md_cost).configure_axis(
+        grid=False
+    )
+    return (rbfe_benchmarks_chart,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""
+    rbfe_mps_intro = mo.md(r"""
     ### RBFE scaling by MPS process count
 
     Select a benchmark system to compare complex-phase RBFE performance across MPS process counts `1`, `2`, and `4`.
     """)
-    return
+    return (rbfe_mps_intro,)
 
 
 @app.cell
@@ -610,8 +613,6 @@ def _(conn, mo):
         value=rbfe_system_options[0],
         label="RBFE system",
     )
-
-    rbfe_system_dropdown
     return (rbfe_system_dropdown,)
 
 
@@ -636,6 +637,7 @@ def _(conn, mo, rbfe_benchmark_costs_with_prices, rbfe_system_dropdown):
         ORDER BY instance_type, mps_process_count;
         """,
         engine=conn,
+        output=False,
     )
     return (rbfe_system_mps_comparison,)
 
@@ -698,9 +700,55 @@ def _(alt, rbfe_system_dropdown, rbfe_system_mps_comparison):
         )
     )
 
-    alt.vconcat(_rbfe_mps_runtime, _rbfe_mps_cost).resolve_scale(
-        color="shared"
-    ).configure_axis(grid=False)
+    rbfe_mps_chart = (
+        alt.vconcat(_rbfe_mps_runtime, _rbfe_mps_cost)
+        .resolve_scale(color="shared")
+        .configure_axis(grid=False)
+    )
+    return (rbfe_mps_chart,)
+
+
+@app.cell(hide_code=True)
+def _(
+    md_benchmarks_chart,
+    md_benchmarks_intro,
+    md_mps_chart,
+    md_mps_intro,
+    md_system_dropdown,
+    mo,
+    mps_process_count_dropdown,
+    rbfe_benchmarks_chart,
+    rbfe_benchmarks_intro,
+    rbfe_mps_chart,
+    rbfe_mps_intro,
+    rbfe_mps_process_count_dropdown,
+    rbfe_system_dropdown,
+):
+    mo.accordion(
+        {
+            "Molecular dynamics (MD) benchmarks": mo.vstack(
+                [
+                    md_benchmarks_intro,
+                    mps_process_count_dropdown,
+                    md_benchmarks_chart,
+                ]
+            ),
+            "MD scaling by MPS process count": mo.vstack(
+                [md_mps_intro, md_system_dropdown, md_mps_chart]
+            ),
+            "Relative binding free energy (RBFE) benchmarks": mo.vstack(
+                [
+                    rbfe_benchmarks_intro,
+                    rbfe_mps_process_count_dropdown,
+                    rbfe_benchmarks_chart,
+                ]
+            ),
+            "RBFE scaling by MPS process count": mo.vstack(
+                [rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart]
+            ),
+        },
+        multiple=True,
+    )
     return
 
 
