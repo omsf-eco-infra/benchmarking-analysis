@@ -19,14 +19,14 @@ app = marimo.App(width="full", app_title="OMSF GPU Cloud Benchmarking")
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(r"""
-    # OMSF GPU cloud benchmark analysis
+    # OMSF GPU Cloud Benchmark Analysis
 
     This notebook showcases an interactive benchmark dashboard for comparing AWS GPU instance types on molecular dynamics (MD) with OpenMM and relative binding free energy (RBFE) with Open Free Energy. We also showcase the use of Nvidia's Multiprocess Service (MPS) for concurrent GPU sharing across multiple processes.
 
     It combines benchmark throughput data with on-demand instance pricing to highlight:
 
     - **Raw performance** across GPU instance families
-    - **Cost efficiency** metrics such as ns/day, ns per dollar, and dollars per ns
+    - **Cost efficiency** metrics such as ns/day and ns/dollar
     - **MPS process-count sensitivity** through the controls below
     - **Best-instance comparisons** with winner highlighting for each benchmark system
 
@@ -104,7 +104,6 @@ async def _():
     _ = system_metadata.to_table("system_metadata")
     chart_height = 260
     chart_width = 120
-
     return chart_height, chart_width, conn, mo, system_metadata
 
 
@@ -636,8 +635,6 @@ def _(alt, chart_height, chart_width, median_rbfe_cost):
 @app.cell(hide_code=True)
 def _(mo):
     rbfe_mps_intro = mo.md(r"""
-    ### RBFE scaling by MPS process count
-
     Select a benchmark system to compare complex-phase RBFE performance across MPS process counts `1`, `2`, and `4`.
     """)
     return (rbfe_mps_intro,)
@@ -815,6 +812,7 @@ def _(
 ):
     mo.vstack(
         [
+            mo.md("## Relative Binding Free Energy (RBFE) benchmarks using Open Free Energy"),
             rbfe_benchmarks_intro,
             rbfe_mps_process_count_dropdown,
             rbfe_benchmarks_chart,
@@ -825,7 +823,7 @@ def _(
 
 @app.cell
 def _(mo, rbfe_mps_chart, rbfe_mps_intro, rbfe_system_dropdown):
-    mo.vstack([rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
+    mo.vstack([mo.md("## RBFE Scaling by MPS Process Count"),rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
     return
 
 
@@ -834,7 +832,7 @@ def _(mo):
     mo.md(r"""
     ## About
 
-    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark). Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration).
+    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark). Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration). All of the data and rendering for this notebook can be found at [omsf-eco-infra/benchmarking-analysis](https://github.com/omsf-eco-infra/benchmarking-analysis).
     """)
     return
 
