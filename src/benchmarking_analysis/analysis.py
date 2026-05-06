@@ -30,10 +30,6 @@ def _(mo):
     - **MPS process-count sensitivity** through the controls below
     - **Best-instance comparisons** with winner highlighting for each benchmark system
 
-    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmarks)
-
-    Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration).
-
     Use the dropdowns and charts to explore how instance choice and concurrency affect both performance and cost.
     """)
     return
@@ -108,7 +104,7 @@ async def _():
     _ = system_metadata.to_table("system_metadata")
     chart_height = 260
     chart_width = 120
-    chart_height, chart_width
+
     return chart_height, chart_width, conn, mo, system_metadata
 
 
@@ -749,7 +745,7 @@ def _(
         .properties(
             title=f"RBFE throughput by instance type: {rbfe_system_dropdown.value}",
             height=chart_height,
-            width=chart_width,
+            width=chart_width * 3,
         )
     )
 
@@ -767,7 +763,7 @@ def _(
         .properties(
             title=f"RBFE cost efficiency by instance type: {rbfe_system_dropdown.value}",
             height=chart_height,
-            width=chart_width,
+            width=chart_width * 3,
         )
     )
 
@@ -830,6 +826,16 @@ def _(
 @app.cell
 def _(mo, rbfe_mps_chart, rbfe_mps_intro, rbfe_system_dropdown):
     mo.vstack([rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    ## About
+
+    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark). Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration).
+    """)
     return
 
 
