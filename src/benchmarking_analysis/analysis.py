@@ -30,6 +30,14 @@ def _(mo):
     - **MPS process-count sensitivity** through the controls below
     - **Best-instance comparisons** with winner highlighting for each benchmark system
 
+    We tested three instance types which correspond to three different GPU configurations:
+
+    | Instance Type | GPU |
+    |---------------|-----|
+    | g4dn.xlarge | NVIDIA T4 |
+    | g5.xlarge | NVIDIA A10G |
+    | g6e.xlarge | NVIDIA L40S |
+
     Use the dropdowns and charts to explore how instance choice and concurrency affect both performance and cost.
     """)
     return
