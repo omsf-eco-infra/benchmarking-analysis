@@ -21,7 +21,7 @@ def _(mo):
     mo.md(r"""
     # OMSF GPU Cloud Benchmark Analysis
 
-    This notebook showcases an interactive benchmark dashboard for comparing AWS GPU instance types on molecular dynamics (MD) with OpenMM and relative binding free energy (RBFE) with Open Free Energy. We also showcase the use of Nvidia's Multiprocess Service (MPS) for concurrent GPU sharing across multiple processes.
+    This notebook presents an interactive benchmark dashboard for comparing AWS GPU instance types on molecular dynamics (MD) with OpenMM and relative binding free energy (RBFE) with Open Free Energy. We also demonstrate the use of NVIDIA's Multi-Process Service (MPS) for concurrent GPU sharing across multiple processes.
 
     It combines benchmark throughput data with on-demand instance pricing to highlight:
 
@@ -30,7 +30,7 @@ def _(mo):
     - **MPS process-count sensitivity** through the controls below
     - **Best-instance comparisons** with winner highlighting for each benchmark system
 
-    We tested three instance types which correspond to three different GPU configurations:
+    We tested three instance types that correspond to three different GPU configurations:
 
     | Instance Type | GPU |
     |---------------|-----|
@@ -139,7 +139,7 @@ def _(benchmark_costs, conn, instance_prices, mo, system_metadata):
 @app.cell(hide_code=True)
 def _(mo):
     md_benchmarks_intro = mo.md(r"""
-    Compare raw throughput and cost efficiency across instance types for the selected MPS process count. Increasing MPS is how many more simulations you run on concurrently on a GPU.
+    Compare raw throughput and cost efficiency across instance types for the selected MPS process count. The MPS process count controls how many simulations run concurrently on each GPU.
     """)
     return (md_benchmarks_intro,)
 
@@ -166,7 +166,7 @@ def _(conn, mo):
     mps_process_count_dropdown = mo.ui.dropdown(
         options=mps_process_count_options,
         value=mps_process_count_options[0],
-        label="MPS process count (Simultaneous simulations / GPU)",
+        label="MPS process count (simultaneous simulations / GPU)",
     )
     return (mps_process_count_dropdown,)
 
@@ -831,7 +831,7 @@ def _(
 
 @app.cell
 def _(mo, rbfe_mps_chart, rbfe_mps_intro, rbfe_system_dropdown):
-    mo.vstack([mo.md("## RBFE Scaling by MPS Process Count"),rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
+    mo.vstack([mo.md("## RBFE scaling by MPS process count"), rbfe_mps_intro, rbfe_system_dropdown, rbfe_mps_chart])
     return
 
 
@@ -840,7 +840,7 @@ def _(mo):
     mo.md(r"""
     ## About
 
-    The benchmark was developed by Open Free Energy for more information checkout the following repo: [OpenFreeEnergy/performance_benchmarks](https://github.com/OpenFreeEnergy/performance_benchmark). Additionally, the entire infrastructure for working with cloud providers to achieve this can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration). All of the data and rendering for this notebook can be found at [omsf-eco-infra/benchmarking-analysis](https://github.com/omsf-eco-infra/benchmarking-analysis).
+    The benchmark was developed by Open Free Energy. For more information, check out the following repo: [OpenFreeEnergy/performance_benchmark](https://github.com/OpenFreeEnergy/performance_benchmark). Additionally, the infrastructure for working with cloud providers can be found here: [omsf-eco-infra/benchmarking-orchestration](https://github.com/omsf-eco-infra/benchmarking-orchestration). All of the data and rendering code for this notebook can be found at [omsf-eco-infra/benchmarking-analysis](https://github.com/omsf-eco-infra/benchmarking-analysis).
     """)
     return
 
