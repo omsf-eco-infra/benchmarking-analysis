@@ -52,12 +52,14 @@ async def _():
     pricing_file_name = "2026-04-pricing.json"
     aws_md_file_name = "md_benchmark_aws_data.parquet"
     aws_rbfe_file_name = "rbfe_benchmark_aws_data.parquet"
+    system_metadata_file_name = "ross_dodecahedron_jacs.json"
     pricing_path = str(mo.notebook_location() / "public" / pricing_file_name)
-    aws_md_benchmark_path = str(
-        mo.notebook_location() / "public" / aws_md_file_name
-    )
+    aws_md_benchmark_path = str(mo.notebook_location() / "public" / aws_md_file_name)
     aws_rbfe_benchmark_path = str(
         mo.notebook_location() / "public" / aws_rbfe_file_name
+    )
+    system_metadata_path = str(
+        mo.notebook_location() / "public" / system_metadata_file_name
     )
     if "pyodide" in sys.modules:
         # We use this to correctly load into duckdb
@@ -72,31 +74,58 @@ async def _():
         rbfe_bench = await pyfetch(aws_rbfe_benchmark_path)
         with open(aws_rbfe_file_name, "wb") as dst:
             dst.write(await rbfe_bench.bytes())
+        system_metadata = await pyfetch(system_metadata_path)
+        with open(system_metadata_file_name, "wb") as dst:
+            dst.write(await system_metadata.bytes())
         pricing_path = pricing_file_name
         aws_md_benchmark_path = aws_md_file_name
         aws_rbfe_benchmark_path = aws_rbfe_file_name
+        system_metadata_path = system_metadata_file_name
 
     _ = conn.read_json(pricing_path).to_table("instance_prices")
     _ = conn.read_parquet(aws_md_benchmark_path).to_table("benchmark_costs")
     _ = conn.read_parquet(aws_rbfe_benchmark_path).to_table("rbfe_benchmark_costs")
+    system_metadata = conn.sql(
+        f"""
+        SELECT
+            system,
+            metadata.atoms.complex AS total_system_size
+        FROM read_json('{system_metadata_path}')
+        UNPIVOT (
+            metadata FOR system IN (
+                bace,
+                p38,
+                jnk1,
+                cdk2,
+                ptp1b,
+                tyk2,
+                mcl1,
+                thrombin
+            )
+        )
+        """
+    )
+    _ = system_metadata.to_table("system_metadata")
     chart_height = 260
     chart_width = 120
     chart_height, chart_width
-    return chart_height, chart_width, conn, mo
+    return chart_height, chart_width, conn, mo, system_metadata
 
 
 @app.cell(hide_code=True)
-def _(benchmark_costs, conn, instance_prices, mo):
+def _(benchmark_costs, conn, instance_prices, mo, system_metadata):
     _df = mo.sql(
         f"""
         CREATE OR REPLACE VIEW benchmark_costs_with_prices AS
         SELECT
             b.*,
+            s.total_system_size,
             p.price_per_hour,
             (p.price_per_hour * 24.0) / NULLIF(b.metric_value, 0) AS dollars_per_ns,
             b.metric_value / NULLIF((p.price_per_hour * 24.0), 0) AS ns_per_dollar
         FROM benchmark_costs b
-        LEFT JOIN instance_prices p USING (instance_type);
+        LEFT JOIN instance_prices p USING (instance_type)
+        LEFT JOIN system_metadata s USING (system);
         """,
         output=False,
         engine=conn
@@ -148,11 +177,12 @@ def _(benchmark_costs_with_prices, conn, mo, mps_process_count_dropdown):
             instance_type,
             median(metric_value) AS ns_per_day,
             median(ns_per_dollar) AS ns_per_dollar,
-            system
+            system,
+            total_system_size
         FROM benchmark_costs_with_prices
         WHERE benchmark_type = 'md'
           AND mps_process_count = {mps_process_count_dropdown.value}
-        GROUP BY mps_process_count, instance_type, system
+        GROUP BY mps_process_count, instance_type, system, total_system_size
         ORDER BY system, ns_per_day DESC;
         """,
         output=False,
@@ -200,6 +230,11 @@ def _(alt, chart_height, chart_width, median_md_cost_mps_1):
             tooltip=[
                 alt.Tooltip("system:N"),
                 alt.Tooltip("instance_type:N"),
+                alt.Tooltip(
+                    "total_system_size:Q",
+                    title="total system size (atoms)",
+                    format=",",
+                ),
                 alt.Tooltip("ns_per_day:Q", format=".2f"),
             ],
         )
@@ -245,6 +280,11 @@ def _(alt, chart_height, chart_width, median_md_cost_mps_1):
             tooltip=[
                 alt.Tooltip("system:N"),
                 alt.Tooltip("instance_type:N"),
+                alt.Tooltip(
+                    "total_system_size:Q",
+                    title="total system size (atoms)",
+                    format=",",
+                ),
                 alt.Tooltip("ns_per_dollar:Q", format=".2f"),
             ],
         )
@@ -261,9 +301,7 @@ def _(alt, chart_height, chart_width, median_md_cost_mps_1):
         )
     )
 
-    md_benchmarks_chart = alt.vconcat(_md_runtime, _md_cost).configure_axis(
-        grid=False
-    )
+    md_benchmarks_chart = alt.vconcat(_md_runtime, _md_cost).configure_axis(grid=False)
     return (md_benchmarks_chart,)
 
 
@@ -313,12 +351,13 @@ def _(benchmark_costs_with_prices, conn, md_system_dropdown, mo):
             mps_process_count,
             instance_type,
             median(metric_value) AS ns_per_day,
-            median(ns_per_dollar) AS ns_per_dollar
+            median(ns_per_dollar) AS ns_per_dollar,
+            total_system_size
         FROM benchmark_costs_with_prices
         WHERE benchmark_type = 'md'
           AND system = '{md_system_sql}'
           AND mps_process_count IN (1, 2, 4)
-        GROUP BY system, mps_process_count, instance_type
+        GROUP BY system, mps_process_count, instance_type, total_system_size
         ORDER BY mps_process_count, instance_type;
         """,
         engine=conn,
@@ -353,6 +392,11 @@ def _(
         alt.Tooltip("system:N", title="system"),
         alt.Tooltip("instance_type:N", title="instance type"),
         alt.Tooltip("mps_process_count:O", title="MPS processes"),
+        alt.Tooltip(
+            "total_system_size:Q",
+            title="total system size (atoms)",
+            format=",",
+        ),
     ]
 
     _md_mps_runtime = (
@@ -408,17 +452,19 @@ def _(mo):
 
 
 @app.cell(hide_code=True)
-def _(conn, instance_prices, mo, rbfe_benchmark_costs):
+def _(conn, instance_prices, mo, rbfe_benchmark_costs, system_metadata):
     _df = mo.sql(
         f"""
         CREATE OR REPLACE VIEW rbfe_benchmark_costs_with_prices AS
         SELECT
             b.*,
+            s.total_system_size,
             p.price_per_hour,
             (p.price_per_hour * 24.0) / NULLIF(b.metric_value, 0) AS dollars_per_ns,
             b.metric_value / NULLIF((p.price_per_hour * 24.0), 0) AS ns_per_dollar
         FROM rbfe_benchmark_costs b
-        LEFT JOIN instance_prices p USING (instance_type);
+        LEFT JOIN instance_prices p USING (instance_type)
+        LEFT JOIN system_metadata s USING (system);
         """,
         output=False,
         engine=conn
@@ -467,12 +513,13 @@ def _(
             instance_type,
             median(metric_value) AS ns_per_day,
             median(ns_per_dollar) AS ns_per_dollar,
-            system
+            system,
+            total_system_size
         FROM rbfe_benchmark_costs_with_prices
         WHERE benchmark_type = 'rbfe'
           AND mps_process_count = {rbfe_mps_process_count_dropdown.value}
           AND phase = 'complex'
-        GROUP BY mps_process_count, instance_type, system
+        GROUP BY mps_process_count, instance_type, system, total_system_size
         ORDER BY system, ns_per_day DESC;
         """,
         output=False,
@@ -513,6 +560,11 @@ def _(alt, chart_height, chart_width, median_rbfe_cost):
             tooltip=[
                 alt.Tooltip("system:N"),
                 alt.Tooltip("instance_type:N"),
+                alt.Tooltip(
+                    "total_system_size:Q",
+                    title="total system size (atoms)",
+                    format=",",
+                ),
                 alt.Tooltip("ns_per_day:Q", format=".2f"),
             ],
         )
@@ -558,6 +610,11 @@ def _(alt, chart_height, chart_width, median_rbfe_cost):
             tooltip=[
                 alt.Tooltip("system:N"),
                 alt.Tooltip("instance_type:N"),
+                alt.Tooltip(
+                    "total_system_size:Q",
+                    title="total system size (atoms)",
+                    format=",",
+                ),
                 alt.Tooltip("ns_per_dollar:Q", format=".2f"),
             ],
         )
@@ -629,13 +686,14 @@ def _(conn, mo, rbfe_benchmark_costs_with_prices, rbfe_system_dropdown):
             mps_process_count,
             instance_type,
             median(metric_value) AS ns_per_day,
-            median(ns_per_dollar) AS ns_per_dollar
+            median(ns_per_dollar) AS ns_per_dollar,
+            total_system_size
         FROM rbfe_benchmark_costs_with_prices
         WHERE benchmark_type = 'rbfe'
           AND phase = 'complex'
           AND system = '{rbfe_system_sql}'
           AND mps_process_count IN (1, 2, 4)
-        GROUP BY system, mps_process_count, instance_type
+        GROUP BY system, mps_process_count, instance_type, total_system_size
         ORDER BY instance_type, mps_process_count;
         """,
         engine=conn,
@@ -670,6 +728,11 @@ def _(
         alt.Tooltip("system:N", title="system"),
         alt.Tooltip("instance_type:N", title="instance type"),
         alt.Tooltip("mps_process_count:O", title="MPS processes"),
+        alt.Tooltip(
+            "total_system_size:Q",
+            title="total system size (atoms)",
+            format=",",
+        ),
     ]
 
     _rbfe_mps_runtime = (
