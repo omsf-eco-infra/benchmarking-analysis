@@ -10,3 +10,4 @@ skills-lock.json
 .agents
 **/layouts
 src/benchmarking_analysis/public
+**/__pycache__
