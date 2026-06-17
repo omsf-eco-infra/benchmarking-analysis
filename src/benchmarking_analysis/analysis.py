@@ -52,6 +52,7 @@ async def _():
     import os
     import sys
 
+    rbfe_ns_per_edge = 66
     conn = duckdb.connect()
     pricing_file_name = "2026-04-pricing.json"
     aws_md_file_name = "md_benchmark_aws_data.parquet"
@@ -112,7 +113,7 @@ async def _():
     _ = system_metadata.to_table("system_metadata")
     chart_height = 260
     chart_width = 120
-    return chart_height, chart_width, conn, mo, system_metadata
+    return chart_height, chart_width, conn, mo, rbfe_ns_per_edge, system_metadata
 
 
 @app.cell(hide_code=True)
@@ -640,6 +641,71 @@ def _(alt, chart_height, chart_width, median_rbfe_cost):
     return (rbfe_benchmarks_chart,)
 
 
+@app.cell
+def _(alt, chart_height, chart_width, median_rbfe_cost, rbfe_ns_per_edge):
+    _rbfe_edge_cost = (
+        alt.Chart(median_rbfe_cost)
+        .transform_calculate(
+            dollars_per_edge=f"{rbfe_ns_per_edge} / datum.ns_per_dollar"
+        )
+        .transform_window(
+            winner="row_number()",
+            groupby=["system"],
+            sort=[
+                alt.SortField("dollars_per_edge", order="ascending"),
+                alt.SortField("instance_type", order="ascending"),  # tie-breaker
+            ],
+        )
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "instance_type:N",
+                title="instance type",
+                sort=["g4dn.xlarge", "g5.xlarge", "g6e.xlarge"],
+                axis=alt.Axis(labelAngle=-45),
+            ),
+            y=alt.Y(
+                "dollars_per_edge:Q",
+                title=f"$ per edge ({rbfe_ns_per_edge} ns)",
+            ),
+            color=alt.condition(
+                alt.datum.winner == 1,
+                alt.Color("instance_type:N", legend=None),
+                alt.value("lightgray"),
+            ),
+            tooltip=[
+                alt.Tooltip("system:N"),
+                alt.Tooltip("instance_type:N"),
+                alt.Tooltip(
+                    "total_system_size:Q",
+                    title="total system size (atoms)",
+                    format=",",
+                ),
+                alt.Tooltip(
+                    "dollars_per_edge:Q",
+                    title=f"$/{rbfe_ns_per_edge} ns edge",
+                    format="$.2f",
+                ),
+            ],
+        )
+        .facet(
+            column=alt.Column(
+                "system:N",
+                title="RBFE Cost ($/edge)",
+                header=alt.Header(labelOrient="bottom"),
+            )
+        )
+        .properties(
+            height=chart_height,
+            width=chart_width,
+        )
+        .configure_axis(grid=False)
+    )
+
+    rbfe_edge_cost_chart = _rbfe_edge_cost
+    return (rbfe_edge_cost_chart,)
+
+
 @app.cell(hide_code=True)
 def _(mo):
     rbfe_mps_intro = mo.md(r"""
@@ -816,6 +882,7 @@ def _(
     mo,
     rbfe_benchmarks_chart,
     rbfe_benchmarks_intro,
+    rbfe_edge_cost_chart,
     rbfe_mps_process_count_dropdown,
 ):
     mo.vstack(
@@ -824,6 +891,7 @@ def _(
             rbfe_benchmarks_intro,
             rbfe_mps_process_count_dropdown,
             rbfe_benchmarks_chart,
+            rbfe_edge_cost_chart,
         ]
     )
     return
