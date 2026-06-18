@@ -709,7 +709,7 @@ def _(alt, chart_height, chart_width, median_rbfe_cost, rbfe_ns_per_edge):
 @app.cell(hide_code=True)
 def _(mo):
     rbfe_mps_intro = mo.md(r"""
-    Select a benchmark system to compare complex-phase RBFE performance across MPS process counts `1`, `2`, and `4`.
+    Select a benchmark system to compare complex-phase RBFE performance, cost efficiency, and cost per edge across MPS process counts `1`, `2`, and `4`.
     """)
     return (rbfe_mps_intro,)
 
@@ -774,6 +774,7 @@ def _(
     alt,
     chart_height,
     chart_width,
+    rbfe_ns_per_edge,
     rbfe_system_dropdown,
     rbfe_system_mps_comparison,
 ):
@@ -838,8 +839,38 @@ def _(
         )
     )
 
+    _rbfe_mps_edge_cost = (
+        alt.Chart(rbfe_system_mps_comparison)
+        .transform_calculate(
+            dollars_per_edge=f"{rbfe_ns_per_edge} / datum.ns_per_dollar"
+        )
+        .mark_bar()
+        .encode(
+            x=_instance_axis,
+            xOffset=_mps_offset,
+            y=alt.Y(
+                "dollars_per_edge:Q",
+                title=f"$ per edge ({rbfe_ns_per_edge} ns)",
+            ),
+            color=_mps_color,
+            tooltip=_tooltips
+            + [
+                alt.Tooltip(
+                    "dollars_per_edge:Q",
+                    title=f"$/{rbfe_ns_per_edge} ns edge",
+                    format="$.2f",
+                )
+            ],
+        )
+        .properties(
+            title=f"RBFE cost per edge by instance type: {rbfe_system_dropdown.value}",
+            height=chart_height,
+            width=chart_width * 3,
+        )
+    )
+
     rbfe_mps_chart = (
-        alt.vconcat(_rbfe_mps_runtime, _rbfe_mps_cost)
+        alt.vconcat(_rbfe_mps_runtime, _rbfe_mps_cost, _rbfe_mps_edge_cost)
         .resolve_scale(color="shared")
         .configure_axis(grid=False)
     )
