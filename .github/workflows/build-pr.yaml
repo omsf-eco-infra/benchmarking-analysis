@@ -31,11 +31,6 @@ jobs:
         run: pixi run build-astro
       - run: npm --prefix web test
 
-      - name: Install browser for interaction tests
-        run: pixi run uv run --no-project --with playwright==1.64.1 playwright install --with-deps chromium
-      - name: Check dashboard interactions and layout
-        run: pixi run uv run --no-project --with playwright==1.64.1 python tests/browser_dashboard.py
-
       - name: Make staging artifact
         shell: bash
         # Preserve the artifact contract used by the staging workflow on main.

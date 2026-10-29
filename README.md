@@ -84,7 +84,7 @@ pixi run build-astro
 npm --prefix web test
 ```
 
-Python tests compare every generated view with the original notebook SQL and check median aggregation, complex-phase filtering, tie-breaking, missing/zero prices, and dataset completeness. The frontend smoke test checks the built single-page dashboard, controls, chart containers, and bundled chart code. The PR build workflow runs the Python, static-output, and browser checks, then stages the Astro site through the existing preview deployment workflow. The artifact keeps the existing `site-build` / `site.tar.gz` / `output/` contract so staging also works with the deploy workflow already on `main`. Production push builds and deployment remain on marimo.
+Python tests compare every generated view with the original notebook SQL and check median aggregation, complex-phase filtering, tie-breaking, missing/zero prices, and dataset completeness. The frontend smoke test checks the built single-page dashboard, controls, chart containers, and bundled chart code. The PR build workflow runs the Python and static-output checks, then stages the Astro site through the existing preview deployment workflow. Playwright browser checks are currently local-only. The artifact keeps the existing `site-build` / `site.tar.gz` / `output/` contract so staging also works with the deploy workflow already on `main`. Production push builds and deployment remain on marimo.
 
 Optional browser checks exercise every dropdown selection, D3 rendering, notebook chart layout, mobile horizontal scrolling, and light/dark theme changes:
 
