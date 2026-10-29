@@ -1,0 +1,97 @@
+---
+import Base from "../layouts/Base.astro";
+import Section from "../components/Section.astro";
+import { loadManifest } from "../lib/manifest";
+
+const manifest = loadManifest();
+---
+
+<Base
+  title="OMSF GPU Cloud Benchmarking"
+  description="AWS GPU instance performance and cost comparisons for MD with OpenMM and RBFE with Open Free Energy."
+>
+  <h1>OMSF GPU Cloud Benchmark Analysis</h1>
+  <p>
+    This notebook presents an interactive benchmark dashboard for comparing AWS GPU instance types on molecular dynamics (MD) with OpenMM and relative binding free energy (RBFE) with Open Free Energy. We also demonstrate the use of NVIDIA's Multi-Process Service (MPS) for concurrent GPU sharing across multiple processes.
+  </p>
+  <p>It combines benchmark throughput data with on-demand instance pricing to highlight:</p>
+  <ul>
+    <li><strong>Raw performance</strong> across GPU instance families</li>
+    <li><strong>Cost efficiency</strong> metrics such as ns/day and ns/dollar</li>
+    <li><strong>MPS process-count sensitivity</strong> through the controls below</li>
+    <li><strong>Best-instance comparisons</strong> with winner highlighting for each benchmark system</li>
+  </ul>
+  <p>We tested three instance types that correspond to three different GPU configurations:</p>
+  <table class="instance-metadata">
+    <thead><tr><th scope="col">Instance Type</th><th scope="col">GPU</th></tr></thead>
+    <tbody>
+      <tr><td>g4dn.xlarge</td><td>NVIDIA T4</td></tr>
+      <tr><td>g5.xlarge</td><td>NVIDIA A10G</td></tr>
+      <tr><td>g6e.xlarge</td><td>NVIDIA L40S</td></tr>
+    </tbody>
+  </table>
+  <p>Use the dropdowns and charts to explore how instance choice and concurrency affect both performance and cost.</p>
+
+  <noscript>
+    <p class="noscript-note">Enable JavaScript to display these precomputed charts. No Python or server API is needed.</p>
+  </noscript>
+
+  <Section
+    id="md-comparison"
+    manifest={manifest}
+    workload="md"
+    kind="mps"
+    title="Molecular Dynamics (MD) benchmarks using OpenMM"
+    lede="Compare raw throughput and cost efficiency across instance types for the selected MPS process count. The MPS process count controls how many simulations run concurrently on each GPU."
+    controlLabel="MPS process count (simultaneous simulations / GPU)"
+  />
+  <Section
+    id="md-scaling"
+    manifest={manifest}
+    workload="md"
+    kind="systems"
+    title="MPS scaling by MPS Process Count"
+    lede="Select a benchmark system to compare instance-type performance across MPS process counts 1, 2, and 4."
+    controlLabel="MD system"
+  />
+  <Section
+    id="rbfe-comparison"
+    manifest={manifest}
+    workload="rbfe"
+    kind="mps"
+    title="Relative Binding Free Energy (RBFE) benchmarks using Open Free Energy"
+    lede="Compare RBFE complex-phase throughput and cost efficiency across instance types for the selected MPS process count."
+    controlLabel="RBFE MPS process count"
+  />
+  <Section
+    id="rbfe-scaling"
+    manifest={manifest}
+    workload="rbfe"
+    kind="systems"
+    title="RBFE scaling by MPS process count"
+    lede="Select a benchmark system to compare complex-phase RBFE performance, cost efficiency, and cost per edge across MPS process counts 1, 2, and 4."
+    controlLabel="RBFE system"
+  />
+
+  <section id="about" aria-labelledby="about-heading">
+    <h2 id="about-heading">About</h2>
+    <p>
+      The benchmark was developed by Open Free Energy. For more information, check out the following repo: <a href="https://github.com/OpenFreeEnergy/performance_benchmark">OpenFreeEnergy/performance_benchmark</a>. Additionally, the infrastructure for working with cloud providers can be found here: <a href="https://github.com/omsf-eco-infra/benchmarking-orchestration">omsf-eco-infra/benchmarking-orchestration</a>. All of the data and rendering code for this notebook can be found at <a href="https://github.com/omsf-eco-infra/benchmarking-analysis">omsf-eco-infra/benchmarking-analysis</a>.
+    </p>
+    <details id="methodology" class="build-details">
+      <summary>Pricing, calculation details, and input files</summary>
+      <p>Pricing snapshot: <code>{manifest.pricing_file}</code>. The default is April 2026, matching the notebook; another snapshot must be selected explicitly at build time.</p>
+      <p>Throughput and ns/dollar use median values across recorded repeats. RBFE includes the complex phase only. Cost per edge is <code>{manifest.rbfe_ns_per_edge} / ns_per_dollar</code>, a complex-phase estimate rather than a complete workflow price.</p>
+      <p>MPS counts are simultaneous processes per GPU, not an extra throughput multiplier. Higher throughput and ns/dollar are better; lower cost per edge is better. Winner ties are broken by instance name. Missing values are omitted, not treated as zero.</p>
+      <p>Analysis is precomputed in Python; D3 only renders the selected results. Charts require JavaScript. Each input file is identified by its SHA-256 hash:</p>
+      <dl class="provenance">
+        {manifest.sources.map((source) => (
+          <><dt><code>{source.file}</code></dt><dd><code>{source.sha256}</code></dd></>
+        ))}
+      </dl>
+    </details>
+  </section>
+  <script>
+    import "../scripts/dashboard";
+  </script>
+</Base>
