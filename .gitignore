@@ -3,11 +3,16 @@
 !.pixi/config.toml
 .DS_Store
 output/*
+output-astro/
+web/node_modules/
+web/.astro/
+web/src/generated/
 public/*
 **/*.egg-info
 **/__marimo__
 skills-lock.json
 .agents
 **/layouts
+!web/src/layouts/
 src/benchmarking_analysis/public
 **/__pycache__

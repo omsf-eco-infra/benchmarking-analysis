@@ -11,22 +11,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
       - name: Install pixi
         uses: prefix-dev/setup-pixi@v0.9.5
         with:
-          pixi-version: v0.66.0
+          pixi-version: v0.82.1
           cache: true
 
-      - name: Build WASM
-        run: pixi run build
+      - run: npm --prefix web ci
+      - run: pixi run test-static
+      - name: Build Astro
+        run: pixi run build-astro
+      - run: npm --prefix web test
 
-      - name: Make artifact
+      - name: Make staging artifact
         shell: bash
-        run: tar czf site.tar.gz output
+        # Preserve the artifact contract used by the staging workflow on main.
+        run: |
+          mkdir -p "$RUNNER_TEMP/site-bundle/output"
+          cp -R output-astro/. "$RUNNER_TEMP/site-bundle/output/"
+          tar czf site.tar.gz -C "$RUNNER_TEMP/site-bundle" output
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

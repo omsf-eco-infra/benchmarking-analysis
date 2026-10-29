@@ -1,0 +1,21 @@
+{
+  "name": "benchmarking-analysis-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Static Astro frontend for the OMSF GPU cloud benchmarking dashboard",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "smoke": "node test/smoke.mjs",
+    "test": "npm run smoke"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "astro": "7.4.4"
+  },
+  "dependencies": {
+    "d3": "^7.9.0"
+  }
+}
