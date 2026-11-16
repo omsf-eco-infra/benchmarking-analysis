@@ -36,16 +36,16 @@ export function readTheme(): ChartTheme {
 }
 
 const INSTANCE_COLORS: Record<string, string> = {
-  "g4dn.xlarge": "#4c78a8",
-  "g5.xlarge": "#f58518",
-  "g6e.xlarge": "#e45756",
+  "g4dn.xlarge": "#64a1b2",
+  "g5.xlarge": "#fbe56f",
+  "g6e.xlarge": "#ea96a9",
 };
 const MPS_COLORS: Record<string, string> = {
-  "1": "#bdd7e7",
-  "2": "#6baed6",
-  "4": "#2171b5",
+  "1": "#a6d382",
+  "2": "#f1cae0",
+  "4": "#64a1b2",
 };
-const FALLBACK_COLORS = ["#b279a2", "#e45756", "#72b7b2", "#9d755d", "#bab0ac"];
+const FALLBACK_COLORS = ["#ea96a9", "#a6d382", "#f1cae0", "#fbe56f", "#bef2e1"];
 
 /** Stable colour per instance type, shared by every comparison chart. */
 export function instanceColor(instance: string): string {
