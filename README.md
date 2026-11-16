@@ -2,19 +2,19 @@
 
 Interactive analysis dashboard for OMSF GPU cloud benchmarking data. The project compares AWS GPU instance performance and cost efficiency for molecular dynamics (MD) and relative binding free energy (RBFE) workloads.
 
-The dashboard is implemented as a [marimo](https://marimo.io/) notebook and can be exported to a static HTML/WASM site found here: [benchmarking.eco-infra.rodeo](https://benchmarking.eco-infra.rodeo).
+The dashboard is built with Astro and D3 from precomputed Python results and deployed at: [benchmarking.eco-infra.rodeo](https://benchmarking.eco-infra.rodeo).
 
 ## Project layout
 
-- `src/benchmarking_analysis/analysis.py` - main marimo notebook/dashboard
+- `src/benchmarking_analysis/analysis.py` - original marimo analysis notebook
 - `data/` - pricing, benchmark, and system metadata files used by the notebook
 - `scripts/generate_ondemand_price.py` - fetches AWS on-demand instance pricing
 - `scripts/export_parquet.py` - exports benchmark data from S3 to local parquet files
 - `output/` - generated marimo HTML/WASM site
-- `src/benchmarking_analysis/static_views.py` - build-time queries for the Astro prototype
+- `src/benchmarking_analysis/static_views.py` - build-time queries for the Astro dashboard
 - `scripts/export_static_views.py` - exports every MD/RBFE selection as JSON
 - `web/` - Astro static frontend
-- `output-astro/` - generated Astro site (separate from the deployed notebook)
+- `output-astro/` - generated Astro site deployed to staging and production
 
 ## Requirements
 
@@ -40,7 +40,7 @@ If the notebook needs local data access from its `public` directory, create the 
 pixi run -e dev link
 ```
 
-## Build the static dashboard
+## Export the marimo notebook
 
 ```bash
 pixi run build
@@ -48,7 +48,7 @@ pixi run build
 
 This cleans and regenerates `output/`, then copies the contents of `data/` into `output/public/` for the exported dashboard.
 
-## Build the Astro prototype
+## Build the deployed Astro dashboard
 
 Requires Node.js 24 and npm in addition to pixi. Install the frontend dependencies once:
 
@@ -76,7 +76,7 @@ npm --prefix web run build
 
 Use `npm --prefix web run build` after that custom export: `pixi run build-astro` regenerates the default April snapshot. Changes to benchmark data or pricing require another build. Generated files in `web/src/generated/` are replaced by the exporter and are not checked in.
 
-Verify the prototype:
+Verify the dashboard:
 
 ```bash
 pixi run test-static
@@ -84,7 +84,7 @@ pixi run build-astro
 npm --prefix web test
 ```
 
-Python tests compare every generated view with the original notebook SQL and check median aggregation, complex-phase filtering, tie-breaking, missing/zero prices, and dataset completeness. The frontend smoke test checks the built single-page dashboard, controls, chart containers, and bundled chart code. The PR build workflow runs the Python and static-output checks, then stages the Astro site through the existing preview deployment workflow. Playwright browser checks are currently local-only. The artifact keeps the existing `site-build` / `site.tar.gz` / `output/` contract so staging also works with the deploy workflow already on `main`. Production push builds and deployment remain on marimo.
+Python tests compare every generated view with the original notebook SQL and check median aggregation, complex-phase filtering, tie-breaking, missing/zero prices, and dataset completeness. The frontend smoke test checks the built single-page dashboard, controls, chart containers, and bundled chart code. Both PR and production push builds run the same Python and static-output checks, then deploy the Astro site to staging or production respectively. Playwright browser checks are currently local-only. The artifact keeps the existing `site-build` / `site.tar.gz` / `output/` contract for both deployment workflows.
 
 Optional browser checks exercise every dropdown selection, D3 rendering, notebook chart layout, mobile horizontal scrolling, and light/dark theme changes:
 
@@ -94,7 +94,7 @@ pixi run uv run --no-project --with playwright==1.64.1 python tests/browser_dash
 # Or use an installed Chrome: append --channel chrome to the second command.
 ```
 
-The existing notebook and its WASM build remain unchanged. This prototype keeps its Python queries separate to avoid breaking that export; parity tests guard against calculation drift until a full migration.
+The existing notebook and its optional WASM export remain available. Astro keeps its Python queries separate to preserve that export; parity tests guard against calculation drift.
 
 ## Regenerate data
 

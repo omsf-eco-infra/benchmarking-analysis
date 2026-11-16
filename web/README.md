@@ -25,7 +25,7 @@ npm --prefix web test
 npm --prefix web run preview
 ```
 
-Output: `../output-astro/`, separate from the existing notebook deployment.
+Output: `../output-astro/`, deployed by both PR and production builds.
 Generated inputs are ignored by Git. For frontend development, export once and
 run `npm --prefix web run dev`. JavaScript is needed to render the charts.
 

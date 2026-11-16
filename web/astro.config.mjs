@@ -1,7 +1,7 @@
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
-  // Keep the prototype separate from the deployed marimo export.
+  // Keep Astro output separate from the optional marimo export.
   outDir: "../output-astro",
   build: { format: "directory" },
   trailingSlash: "always",
