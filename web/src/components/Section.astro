@@ -1,0 +1,47 @@
+---
+import ChartPanel from "./ChartPanel.astro";
+import { formatSelection } from "../lib/format";
+import { viewsFor, type Manifest, type View } from "../lib/manifest";
+
+interface Props {
+  id: string;
+  manifest: Manifest;
+  workload: View["workload"];
+  kind: View["kind"];
+  title: string;
+  lede: string;
+  controlLabel: string;
+}
+
+const { id, manifest, workload, kind, title, lede, controlLabel } = Astro.props;
+const views = viewsFor(manifest, workload, kind);
+const view = views[0];
+---
+
+<section
+  class="result-section"
+  id={id}
+  data-workload={workload}
+  data-kind={kind}
+  aria-labelledby={`${id}-heading`}
+>
+  <h2 id={`${id}-heading`}>{title}</h2>
+  <p class="section-lede">{lede}</p>
+
+  <div class="section-controls">
+    <label for={`${id}-select`}>{controlLabel}</label>
+    <select id={`${id}-select`} data-view-select disabled>
+      {
+        views.map((candidate) => (
+          <option value={candidate.path} selected={candidate.path === view.path}>
+            {formatSelection(candidate.selection)}
+          </option>
+        ))
+      }
+    </select>
+    <p class="selection-title" data-selection-title aria-live="polite">{view.title}</p>
+  </div>
+
+  <ChartPanel view={view} />
+
+</section>

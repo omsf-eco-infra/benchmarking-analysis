@@ -42,7 +42,7 @@ jobs:
       pr-headsha: ${{ needs.get-metadata.outputs.pr_headsha }}
       project-name: ${{ vars. CLOUDFLARE_PROJECT_NAME }}
       html-dir: output
-      label: Marimo site
+      label: Astro site
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

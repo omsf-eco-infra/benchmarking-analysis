@@ -40,6 +40,17 @@ build =  [
     {task = "install-data"}
 ]
 
+# The prototype stays separate from the deployed marimo build.
+[tool.pixi.tasks.export-static]
+cmd = "python scripts/export_static_views.py"
+
+[tool.pixi.tasks.build-astro]
+cmd = "npm --prefix web run build"
+depends-on = ["export-static"]
+
+[tool.pixi.tasks.test-static]
+cmd = "python -m unittest discover -s tests -v"
+
 [tool.pixi.feature.aggregate.dependencies]
 boto3 = "*"
 

@@ -1,0 +1,24 @@
+---
+import { chartTitle } from "../lib/format";
+import type { View } from "../lib/manifest";
+
+interface Props { view: View; }
+const { view } = Astro.props;
+---
+
+<div class="chart-grid" data-chart-grid>
+  {
+    view.charts.map((chart) => (
+      <figure class="chart" data-metric={chart.metric}>
+        <figcaption>{chartTitle(view, chart.metric)}</figcaption>
+        <div
+          class="chart__canvas"
+          data-chart-canvas
+          tabindex="0"
+          role="region"
+          aria-label={`${chartTitle(view, chart.metric)}; scroll horizontally if needed`}
+        />
+      </figure>
+    ))
+  }
+</div>
